@@ -10,7 +10,7 @@ FOLDER='dayjs-website'
 
 dependencies=(git perl jq commonmark sqlite3)
 for dep in ${dependencies[@]}; do
-  hash $dep && exit 1
+  hash $dep || exit 1
 done
 
 # cleanup
@@ -18,18 +18,21 @@ rm -rf $SLUG.docset /tmp/$SLUG
 
 # basic folders & files
 [ -d $FOLDER ] || git clone $REPO
-mkdir $SLUG.docset/Contents/Resources/Documents/
+mkdir -p $SLUG.docset/Contents/Resources/Documents/
 mkdir /tmp/$SLUG/
+sqlite3 $SLUG.docset/Contents/Resources/docSet.dsidx '
+  CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
+  CREATE UNIQUE INDEX anchor ON searchIndex (name, type, path);
+'
 
 # ordered categories
 IFS="
 "
-categories=$(jq '.docs | keys_unsorted | .[]' < $FOLDER/website/sidebars.json)
+categories=$(jq -r '.docs | keys_unsorted | .[]' < $FOLDER/website/sidebars.json)
 
 # concatenate each category in single file + index.md
 for cat in ${categories[@]}; do
-  echo "# $cat" > /tmp/$SLUG/$cat.md
-  for subcat in $(jq -r ".docs[$cat] | .[]" < $FOLDER/website/sidebars.json); do
+  for subcat in $(jq -r ".docs[\"$cat\"] | .[]" < $FOLDER/website/sidebars.json); do
     cat $FOLDER/docs/$subcat.md >> /tmp/$SLUG/$cat.md
   done
 
@@ -37,7 +40,10 @@ for cat in ${categories[@]}; do
   perl -0777 -pi -e 's/---\n[^\n]*\n[^:]*: ([^\n]*)\n---/## \1/g' /tmp/$SLUG/$cat.md
   # md -> html
   commonmark /tmp/$SLUG/$cat.md > $SLUG.docset/Contents/Resources/Documents/$cat.html
+  # sqlite
+  sqlite3 $SLUG.docset/Contents/Resources/docSet.dsidx "
+    INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES ($cat, 'Category', $cat.html);
+  "
 done
 
-# sqlite entries
 # tar zcf docset
