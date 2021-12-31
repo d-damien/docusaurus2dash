@@ -23,9 +23,7 @@ IFS="
 categories=$(jq '.docs | keys_unsorted | .[]' < $FOLDER/website/sidebars.json)
 
 # concatenate each category in single file + index.md
-echo "# $NAME : table of contents" > /tmp/$SLUG/index.md
 for cat in ${categories[@]}; do
-  echo "## $cat" >> /tmp/$SLUG/index.md
   for subcat in $(jq -r ".docs[$cat] | .[]" < $FOLDER/website/sidebars.json); do
     cat $FOLDER/docs/$subcat.md >> /tmp/$SLUG/$cat.md
   done
@@ -36,7 +34,7 @@ done
 # ... cd, for loop, jq & sidebars.json etc
 
 
-perl -0777 -pe 's/---\n[^\n]*\n[^\n]*\n---/abc/g' /tmp/dayjs/$d.md
+perl -0777 -pi -e 's/---\n[^\n]*\n[^\n]*\n---/abc/g' /tmp/dayjs/$d.md
 
 # sqlite entries
 # mardown to html
