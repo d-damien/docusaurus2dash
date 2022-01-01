@@ -24,11 +24,6 @@ sqlite3 $NAME.docset/Contents/Resources/docSet.dsidx '
   CREATE UNIQUE INDEX anchor ON searchIndex (name, type, path);
 '
 
-# ordered categories
-IFS="
-"
-categories=$(jq -r '.docs | keys_unsorted | .[]' < $FOLDER/website/sidebars.json)
-
 # extract title from header
 function fileTitle() {
   perl -0777 -wnE 'say /---\n[^:]*: [^\n]*\n[^:]*: [^\n]*\n---/g' $1\
@@ -44,19 +39,24 @@ function _mdToHtml() {
   # md -> html
   pandoc -f markdown -t html -s\
     --metadata pagetitle="todo"\
-    --quiet
-    -o ${1%md}.html\
+    --quiet\
+    -o ${1%.md}.html\
     "$1"
 }
 
-# index.md + sqlite index
 cp -r $FOLDER/docs/* /tmp/$NAME/
 echo "# $NAME : table of contents" > /tmp/$NAME/index.md
 
+# ordered categories
+IFS="
+"
+categories=$(jq -r '.docs | keys_unsorted | .[]' < $FOLDER/website/sidebars.json)
+
+# index.md + sqlite index
 for cat in ${categories[@]}; do
-  echo "## $cat" >> /tmp/$NAME/index.md
+  echo -e "\n## $cat" >> /tmp/$NAME/index.md
   for subCatFile in $(jq -r ".docs[\"$cat\"] | .[]" < $FOLDER/website/sidebars.json); do
-    subCatTitle=$(fileTitle $subCatFile.md)
+    subCatTitle=$(fileTitle /tmp/$NAME/$subCatFile.md)
     echo "- [$subCatTitle]($subCatFile.html)" >> /tmp/$NAME/index.md
 
     sqlite3 $NAME.docset/Contents/Resources/docSet.dsidx "
@@ -66,8 +66,8 @@ for cat in ${categories[@]}; do
 done
 
 for mdFile in $(find /tmp/$NAME -name "*.md"); do
-  _mdToHtml $mdFile
-  rm $mdFile
+  _mdToHtml "$mdFile"
+  rm "$mdFile"
 done
 mv /tmp/$NAME/* $NAME.docset/Contents/Resources/Documents/
 
