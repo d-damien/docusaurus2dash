@@ -8,7 +8,7 @@ NAME='DayJS'
 REPO='https://github.com/dayjs/dayjs-website'
 FOLDER='dayjs-website'
 
-dependencies=(git perl jq commonmark sqlite3)
+dependencies=(git jq perl pandoc sqlite3 tar)
 for dep in ${dependencies[@]}; do
   hash $dep || exit 1
 done
@@ -39,11 +39,19 @@ for cat in ${categories[@]}; do
   # replace docusaurus ---\n slug \n title \n--- with md title
   perl -0777 -pi -e 's/---\n[^\n]*\n[^:]*: ([^\n]*)\n---/## \1/g' /tmp/$SLUG/$cat.md
   # md -> html
-  commonmark /tmp/$SLUG/$cat.md > $SLUG.docset/Contents/Resources/Documents/$cat.html
+  pandoc -f gfm -t html -s\
+    --metadata title="$cat"\
+    -o $SLUG.docset/Contents/Resources/Documents/$cat.html\
+    /tmp/$SLUG/$cat.md
   # sqlite
   sqlite3 $SLUG.docset/Contents/Resources/docSet.dsidx "
     INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES ($cat, 'Category', $cat.html);
   "
 done
+
+# @todo
+# css
+# index ?
+# ancres commonmark ??
 
 # tar zcf docset
