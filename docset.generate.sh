@@ -36,11 +36,11 @@ for cat in ${categories[@]}; do
     cat $FOLDER/docs/$subcat.md >> /tmp/$SLUG/$cat.md
   done
 
-  # replace docusaurus ---\n slug \n title \n--- with md title
-  perl -0777 -pi -e 's/---\n[^\n]*\n[^:]*: ([^\n]*)\n---/## \1/g' /tmp/$SLUG/$cat.md
+  # replace docusaurus ---\n slug \n title \n--- with pandoc markdown title
+  perl -0777 -pi -e 's/---\n[^:]*: ([^\n]*)\n[^:]*: ([^\n]*)\n---/## \2 {#\1}/g' /tmp/$SLUG/$cat.md
   # md -> html
-  pandoc -f gfm -t html -s\
-    --metadata title="$cat"\
+  pandoc -f markdown -t html -s\
+    --metadata pagetitle="$cat"\
     -o $SLUG.docset/Contents/Resources/Documents/$cat.html\
     /tmp/$SLUG/$cat.md
   # sqlite
@@ -53,5 +53,6 @@ done
 # css
 # index ?
 # ancres commonmark ??
+# icon
 
 # tar zcf docset
