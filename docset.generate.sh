@@ -38,7 +38,7 @@ function _mdToHtml() {
   perl -0777 -pi -e 's/---\n[^:]*: ([^\n]*)\n[^:]*: ([^\n]*)\n---/\n\n## \2 {#\1}/g' "$1"
   # md -> html
   pandoc -f markdown -t html -s\
-    --metadata pagetitle="todo"\
+    --metadata pagetitle="$(fileTitle $1)"\
     --quiet\
     -o ${1%.md}.html\
     "$1"
@@ -66,6 +66,7 @@ for cat in ${categories[@]}; do
 done
 
 for mdFile in $(find /tmp/$NAME -name "*.md"); do
+  echo Converting $mdFile...
   _mdToHtml "$mdFile"
   rm "$mdFile"
 done
