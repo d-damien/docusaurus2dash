@@ -33,18 +33,19 @@ function fileTitle() {
 }
 
 # convert one md file to html
-function _mdToHtml() {
+function mdToHtml() {
   # replace docusaurus ---\n slug \n title \n--- with pandoc markdown title
   perl -0777 -pi -e 's/---\n[^:]*: ([^\n]*)\n[^:]*: ([^\n]*)\n---/\n\n## \2 {#\1}/g' "$1"
   # md -> html
-  pandoc -f markdown -t html -s\
+  outputFile=${1%.md}.html
+  pandoc -f markdown -t html --quiet\
     --metadata pagetitle="$(fileTitle $1)"\
-    --quiet\
-    -o ${1%.md}.html\
-    "$1"
+    -o $outputFile "$1"
+  # css
+  echo -e "<link href='../style.css' rel='stylesheet'>\n" >> $outputFile
 }
 
-cp -r $FOLDER/docs/* /tmp/$NAME/
+cp -r $FOLDER/docs/* style.css /tmp/$NAME/
 echo "# $NAME : table of contents" > /tmp/$NAME/index.md
 
 # ordered categories
@@ -67,7 +68,7 @@ done
 
 for mdFile in $(find /tmp/$NAME -name "*.md"); do
   echo Converting $mdFile...
-  _mdToHtml "$mdFile"
+  mdToHtml "$mdFile"
   rm "$mdFile"
 done
 mv /tmp/$NAME/* $NAME.docset/Contents/Resources/Documents/
