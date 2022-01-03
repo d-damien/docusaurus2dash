@@ -58,10 +58,11 @@ for cat in ${categories[@]}; do
   echo -e "\n## $cat" >> /tmp/$NAME/index.md
   for subCatFile in $(jq -r ".docs[\"$cat\"] | .[]" < $FOLDER/website/sidebars.json); do
     subCatTitle=$(fileTitle /tmp/$NAME/$subCatFile.md)
+    echo Indexing $subCatTitle...
     echo "- [$subCatTitle]($subCatFile.html)" >> /tmp/$NAME/index.md
 
     sqlite3 $NAME.docset/Contents/Resources/docSet.dsidx "
-      INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES ($subCatTitle, 'Element', $subCatFile.html);
+      INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (\"$cat : $subCatTitle\", 'Element', \"$subCatFile.html\");
     "
   done
 done
