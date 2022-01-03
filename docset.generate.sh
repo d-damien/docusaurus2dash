@@ -7,22 +7,23 @@ NAME='DayJS'
 REPO='https://github.com/dayjs/dayjs-website'
 FOLDER='dayjs-website'
 
-dependencies=(git jq perl pandoc sqlite3 tar)
-for dep in ${dependencies[@]}; do
-  hash $dep || exit 1
-done
+function checkDependencies() {
+  dependencies=(git jq perl pandoc sqlite3 tar)
+  for dep in ${dependencies[@]}; do
+    hash $dep || exit 1
+  done
+}
 
-# cleanup
-rm -rf $NAME.docset /tmp/$NAME
+function cleanup() {
+  rm -rf $NAME.docset /tmp/$NAME
+}
 
-# basic folders & files
-[ -d $FOLDER ] || git clone $REPO
-mkdir -p $NAME.docset/Contents/Resources/Documents/
-mkdir /tmp/$NAME/
-sqlite3 $NAME.docset/Contents/Resources/docSet.dsidx '
-  CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
-  CREATE UNIQUE INDEX anchor ON searchIndex (name, type, path);
-'
+function setupBasicFiles() {
+  [ -d $FOLDER ] || git clone $REPO
+  mkdir -p $NAME.docset/Contents/Resources/Documents/
+  mkdir /tmp/$NAME/
+  cp -r $FOLDER/docs/* style.css /tmp/$NAME/
+}
 
 # extract title from header
 function fileTitle() {
@@ -45,42 +46,60 @@ function mdToHtml() {
   echo -e "<link href='../style.css' rel='stylesheet'>\n" >> $outputFile
 }
 
-cp -r $FOLDER/docs/* style.css /tmp/$NAME/
-echo "# $NAME : table of contents" > /tmp/$NAME/index.md
 
-# ordered categories
-IFS="
-"
-categories=$(jq -r '.docs | keys_unsorted | .[]' < $FOLDER/website/sidebars.json)
+function indexFiles() {
+  echo "# $NAME : table of contents" > /tmp/$NAME/index.md
 
-# index.md + sqlite index
-for cat in ${categories[@]}; do
-  echo -e "\n## $cat" >> /tmp/$NAME/index.md
-  for subCatFile in $(jq -r ".docs[\"$cat\"] | .[]" < $FOLDER/website/sidebars.json); do
-    subCatTitle=$(fileTitle /tmp/$NAME/$subCatFile.md)
-    echo Indexing $subCatTitle...
+  # index DB
+  sqlite3 $NAME.docset/Contents/Resources/docSet.dsidx '
+    CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);
+    CREATE UNIQUE INDEX anchor ON searchIndex (name, type, path);
+  '
+  # ordered categories
+  IFS="
+  "
+  categories=$(jq -r '.docs | keys_unsorted | .[]' < $FOLDER/website/sidebars.json)
 
-    echo "- [$subCatTitle]($subCatFile.html)" >> /tmp/$NAME/index.md
-    indexValues+=",(\"$cat : $subCatTitle\", 'Element', \"$subCatFile.html\")"
+  # index.md + sqlite index
+  for cat in ${categories[@]}; do
+    echo -e "\n## $cat" >> /tmp/$NAME/index.md
+    echo "debug" $cat ".docs[\"$cat\"]"
+    for subCatFile in $(jq -r ".docs[\"$cat\"] | .[]" < $FOLDER/website/sidebars.json); do
+      subCatTitle=$(fileTitle /tmp/$NAME/$subCatFile.md)
+      echo Indexing $subCatTitle...
+
+      echo "- [$subCatTitle]($subCatFile.html)" >> /tmp/$NAME/index.md
+      indexValues+=",(\"$cat : $subCatTitle\", 'Element', \"$subCatFile.html\")"
+    done
   done
-done
 
-sqlite3 $NAME.docset/Contents/Resources/docSet.dsidx "
-  INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES ${indexValues#,};
-"
+  sqlite3 $NAME.docset/Contents/Resources/docSet.dsidx "
+    INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES ${indexValues#,};
+  "
+}
 
-for mdFile in $(find /tmp/$NAME -name "*.md"); do
-  echo Converting $mdFile...
-  mdToHtml "$mdFile"
-  rm "$mdFile"
-done
-mv /tmp/$NAME/* $NAME.docset/Contents/Resources/Documents/
+function convertFiles() {
+  for mdFile in $(find /tmp/$NAME -name "*.md"); do
+    echo Converting $mdFile...
+    mdToHtml "$mdFile"
+    rm "$mdFile"
+  done
+  mv /tmp/$NAME/* $NAME.docset/Contents/Resources/Documents/
+}
+
+function docusaurus2dash() {
+  checkDependencies
+  cleanup
+  setupBasicFiles
+  indexFiles
+  convertFiles
+}
+
+docusaurus2dash
 
 
 # @todo
 # css
-# index ?
-# ancres commonmark ??
 # icon
 
 # tar zcf docset
