@@ -30,7 +30,7 @@ function fileTitle() {
   perl -0777 -wnE 'say /---\n[^:]*: [^\n]*\n[^:]*: [^\n]*\n---/g' $1\
     | grep 'title:'\
     | cut -f  2 -d:\
-    | tr -d ' '
+    | sed 's/^ //'
 }
 
 # convert one md file to html
@@ -63,7 +63,8 @@ function indexFiles() {
   # index.md + sqlite index
   for cat in ${categories[@]}; do
     echo -e "\n## $cat" >> /tmp/$NAME/index.md
-    for subCatFile in $(jq -r ".docs[\"$cat\"] | .[]" < $FOLDER/website/sidebars.json); do
+    subCatFiles=$(jq -r ".docs[\"$cat\"] | .[]" < $FOLDER/website/sidebars.json)
+    for subCatFile in $subCatFiles; do
       subCatTitle=$(fileTitle /tmp/$NAME/$subCatFile.md)
       echo Indexing $subCatTitle...
 
