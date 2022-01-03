@@ -46,7 +46,9 @@ function mdToHtml() {
   echo -e "<link href='../style.css' rel='stylesheet'>\n" >> $outputFile
 }
 
-
+# List & index files
+# @precondition IFS="
+# " (litteral line return outside of function)
 function indexFiles() {
   echo "# $NAME : table of contents" > /tmp/$NAME/index.md
 
@@ -56,14 +58,11 @@ function indexFiles() {
     CREATE UNIQUE INDEX anchor ON searchIndex (name, type, path);
   '
   # ordered categories
-  IFS="
-  "
   categories=$(jq -r '.docs | keys_unsorted | .[]' < $FOLDER/website/sidebars.json)
 
   # index.md + sqlite index
   for cat in ${categories[@]}; do
     echo -e "\n## $cat" >> /tmp/$NAME/index.md
-    echo "debug" $cat ".docs[\"$cat\"]"
     for subCatFile in $(jq -r ".docs[\"$cat\"] | .[]" < $FOLDER/website/sidebars.json); do
       subCatTitle=$(fileTitle /tmp/$NAME/$subCatFile.md)
       echo Indexing $subCatTitle...
@@ -94,6 +93,9 @@ function docusaurus2dash() {
   indexFiles
   convertFiles
 }
+
+IFS="
+"
 
 docusaurus2dash
 
