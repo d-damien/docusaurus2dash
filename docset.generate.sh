@@ -6,9 +6,10 @@
 NAME='DayJS'
 REPO='https://github.com/dayjs/dayjs-website'
 FOLDER='dayjs-website'
+ICON_PATH='dayjs-website/website/static/img/logo.png'
 
 function checkDependencies() {
-  dependencies=(git jq perl pandoc sqlite3 tar)
+  dependencies=(git convert jq perl pandoc sqlite3 tar)
   for dep in ${dependencies[@]}; do
     hash $dep || exit 1
   done
@@ -22,6 +23,8 @@ function setupBasicFiles() {
   [ -d $FOLDER ] || git clone $REPO
   mkdir -p $NAME.docset/Contents/Resources/Documents/
   echo $(eval echo \"$(cat Info.plist.dist)\") > $NAME.docset/Contents/Info.plist
+  convert "$ICON_PATH" -resize 16x $NAME.docset/icon.png
+
   mkdir /tmp/$NAME/
   cp -r $FOLDER/docs/* style.css /tmp/$NAME/
 }
