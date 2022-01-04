@@ -21,6 +21,7 @@ function cleanup() {
 function setupBasicFiles() {
   [ -d $FOLDER ] || git clone $REPO
   mkdir -p $NAME.docset/Contents/Resources/Documents/
+  echo $(eval echo \"$(cat Info.plist.dist)\") > $NAME.docset/Contents/Info.plist
   mkdir /tmp/$NAME/
   cp -r $FOLDER/docs/* style.css /tmp/$NAME/
 }
